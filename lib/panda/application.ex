@@ -1,7 +1,7 @@
 defmodule Panda.Application do
   use Application
 
-  @rating_system :elo
+  @rating_system :elo #either :norm or :elo
 
   def start(_type, _args) do
 
