@@ -4,17 +4,18 @@ defmodule Panda.Rating do
   """
   require Logger
 
+  @doc """
+  Computes odds by counting the number of matches won vs. the matches played.
+  The odds are then normalised to sum to 1.
+  """
   def normalise(players) do
-
-    odds = Enum.map(players, fn player ->
+    Enum.map(players, fn player ->
       {played, won} = statistics_player(player["matches"], player["id"])
       Logger.debug "team #{player["id"]} won #{won} matches out of #{played}"
-
       score = won/played
       Map.put(player, "score", score)
     end)
-
-    normalise_odds(odds)
+    |> normalise_odds
   end
 
   def normalise_odds(odds) do
@@ -23,8 +24,7 @@ defmodule Panda.Rating do
       end)
 
     Enum.reduce(odds, %{}, fn player, acc ->
-      percentage = player["score"] / sum
-      Map.put(acc, player["acronym"], percentage)
+      Map.put(acc, player["acronym"], player["score"] / sum)
     end)
   end
 
@@ -47,7 +47,7 @@ defmodule Panda.Rating do
   @doc """
   Computes odds using an elo rating system.
   The participants are every player playing at least once against either
-  player1 or player 2
+  player1 or player2
   Stores participant id an rating in ets for fast access.
   A preprocessing is necessary to order matches in chronological order.
   Once ordered, each match updates the rating of its participants.
