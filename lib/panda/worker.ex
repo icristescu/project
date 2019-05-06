@@ -17,65 +17,46 @@ defmodule Panda.Worker do
   end
 
   def handle_call(:upcoming_matches, _from, state) do
-    json = get(:upcoming_matches)
+    matches =
+      get(:upcoming_matches)
+      |> preprocess_upcoming_matches
 
-    matches = Enum.map(json,
+    {:reply, matches, state}
+  end
+
+  def handle_cast({:odds_for_match, pid, player, match_id}, state) do
+    player =
+      get(:score, player["id"])
+      |> preprocess_odds_for_match(player)
+
+    send pid, {:reply, self(), player, match_id}
+    {:noreply, state}
+  end
+
+  defp preprocess_upcoming_matches(json) do
+    Enum.map(json,
       fn match ->
 	Map.put(%{}, "begin_at", match["begin_at"])
 	|> Map.put("id", match["id"])
 	|> Map.put("name", match["name"])
 	|> Map.put("opponents", match["opponents"])
       end)
-
-    {:reply, matches, state}
   end
 
-  def handle_cast({:odds_for_match, from, pid, player}, state) do
-    json = get(:score, player["id"])
-
-    score = score(json, player["id"])
-    player = Map.put(player, "score", score)
-    send pid, {:reply, from, self(), player}
-    {:noreply, state}
-  end
-
-  @doc """
-  Computes a score for a team as the number of matches won divided by the number
-  of matches played.
-
-  ## Parameters
-
-  - matches: a list of matches where match_id participates
-  - match_id: id of the match
-  """
-  defp score(matches, team_id) do
+  defp preprocess_odds_for_match(json, player) do
     Logger.info "working ..."
 
-    opponents_id =
-      Enum.map(matches,
+    matches =
+      Enum.map(json,
 	fn match ->
 	  opponent_id = get_opponent_id(match)
-	  Map.put(%{}, "winner_id", match["winner_id"])
+	  Map.put(%{}, "begin_at", match["begin_at"])
+	  |> Map.put("winner_id", match["winner_id"])
 	  |> Map.put("opponent_id", opponent_id)
 	end)
-    Logger.debug "opponents_id for #{team_id} are #{inspect opponents_id}"
+    Logger.debug "matches for #{player["id"]} are #{inspect matches}"
 
-    {played, won} = statistics_player(opponents_id, team_id)
-    Logger.debug "team #{team_id} won #{won} matches out of #{played}"
-
-    won/played
-  end
-
-  def statistics_player(opponents_id, team_id) do
-    Enum.reduce(opponents_id, {0,0},
-      fn match, {played, won} ->
-	winner_id = match["winner_id"]
-	case winner_id do
-	  nil -> {played, won}
-	  ^team_id -> {played+1, won+1}
-	  _winner_id -> {played+1, won}
-	end
-      end)
+    Map.put(player, "matches", matches)
   end
 
   defp get_opponent_id(match) do
@@ -107,9 +88,7 @@ defmodule Panda.Worker do
     if response == :timeout do get(:score, team_id)
     else response
     end
-
   end
-
 
   defp http_response(
     {:ok, %HTTPoison.Response{status_code: 200, body: body}}) do

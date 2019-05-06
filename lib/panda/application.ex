@@ -1,6 +1,8 @@
 defmodule Panda.Application do
   use Application
 
+  @rating_system :norm
+
   def start(_type, _args) do
 
     children = [
@@ -17,7 +19,8 @@ defmodule Panda.Application do
   end
 
   def odds_for_match(match_id) do
-    GenServer.call(Panda.Server, {:odds_for_match, match_id}, :infinity)
+    GenServer.call(Panda.Server, {:odds_for_match, match_id, @rating_system},
+      :infinity)
   end
 
 end

@@ -24,23 +24,28 @@ defmodule PandaTest do
     assert (Enum.count Panda.upcoming_matches) == 5
   end
 
-  test "get opponents for a match" do
+  test "get players for a match" do
     matches = test_matches()
-    assert (Panda.Server.get_opponents(matches, 544235) ==
+    assert (Panda.Server.get_players(matches, 544235) ==
       [%{"acronym" => "iG.V", "id" => 1650},
        %{"acronym" => "Aster.A", "id" => 126000}])
+  end
+
+  test "get nb of players for a match" do
+    matches = test_matches()
+    assert (Panda.Server.get_nb_players(matches, 544235) == 2)
   end
 
   test "normalise scores" do
     odds = [ %{"acronym" => "iG.V", "id" => 1650, "score" => 1.2},
   	     %{"acronym" => "Aster.A", "id" => 126000, "score" => 1.7}]
-    assert (Panda.Server.normalise(odds) == %{"Aster.A" => 0.5862068965517241,
-  					      "iG.V" => 0.41379310344827586})
+    assert (Panda.Ranting.normalise_odds(odds) ==
+      %{"Aster.A" => 0.5862068965517241, "iG.V" => 0.41379310344827586})
   end
 
   test "statistics for a team" do
     opponents_id = matches_opponent_winner()
-    assert (Panda.Worker.statistics_player(opponents_id, 1664) == {44,30})
+    assert (Panda.Ranting.statistics_player(opponents_id, 1664) == {44,30})
   end
 
   def test_matches do
