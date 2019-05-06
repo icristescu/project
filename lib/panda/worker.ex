@@ -1,4 +1,8 @@
 defmodule Panda.Worker do
+  @moduledoc """
+  Calls the panda api.
+  Preprocess results before sending them to the Server.
+  """
 
   use GenServer
   require Logger
@@ -35,6 +39,15 @@ defmodule Panda.Worker do
     {:noreply, state}
   end
 
+  @doc """
+  Computes a score for a team as the number of matches won divided by the number
+  of matches played.
+
+  ## Parameters
+
+  - matches: a list of matches where match_id participates
+  - match_id: id of the match
+  """
   defp score(matches, team_id) do
     Logger.info "working ..."
 

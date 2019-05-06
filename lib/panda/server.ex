@@ -1,12 +1,15 @@
 defmodule Panda.Server do
-
+  @moduledoc """
+  Handles the application calls :upcoming_matches and :odds_for_match.
+  It creates workers for each API call.
+  """
   use GenServer
   require Logger
 
   defmodule State do
-    defstruct odds: [],
-      matches: nil,
-      scores: nil
+    defstruct odds: [], # store results from workers as they come
+      matches: nil,     # upcoming matches
+      scores: nil       # cache for previously computed results
   end
 
   def start_link(args) do
@@ -18,6 +21,12 @@ defmodule Panda.Server do
     {:ok, %State{scores: new(:scores)}}
   end
 
+  @doc """
+  Starts a worker to call the panda api.
+  It fetches results from the worker, formats the output in response
+  and stores the result in State.
+  It shutdown the worker.
+  """
   def handle_call(:upcoming_matches, _from, state) do
     pid = init_child()
     Logger.debug "worker #{inspect pid} started"
@@ -48,6 +57,17 @@ defmodule Panda.Server do
     end
   end
 
+  @doc """
+  Starts a worker for each player in the match to call the panda api and
+  compute a score for that player.
+  If player's score is in the cache, then retrieve it and send it to self.
+
+  ## Parameters
+
+  - match_id: id of the match, must be in matches
+  - from: reference to Application, to send back the results once they are in
+  - scores: the cache
+  """
   defp handle_odds_for_match(match_id, from, matches, scores) do
 
     Logger.debug "the opponents for match #{match_id} are"
@@ -79,14 +99,22 @@ defmodule Panda.Server do
     end
   end
 
-  # receives results either from self
-  #  or from child, in which case:
-  # - add result to ets
-  # - kill child
-  # when all results are in
-  # - normalise the odds
-  # - send them upstream
-  # - clean state
+   @doc """
+   Receives results from workers and compute the final result.
+   Sends the final result to Application and cleans the state.
+
+   If the partial results come from a worker, store it in cache and shutdown
+   the worker.
+
+   ## Parameters
+
+    - {:reply, from, child_pid, player}: worker's message, where
+       - from: reference to Application
+       - child_pid: the worker, or nil if the message is send by self
+       - player: the worker's result
+    - state = %{odds, scores} : odds stores the partial results from workers,
+    scores is the cache.
+   """
   def handle_info({:reply, from, child_pid, player},
     state = %{odds: odds, scores: scores}) do
     Logger.debug "receive #{inspect player} from #{inspect child_pid}"

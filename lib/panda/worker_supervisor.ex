@@ -1,4 +1,10 @@
 defmodule Panda.WorkerSupervisor do
+  @moduledoc """
+  Dynamic supervisor for workers.
+  When workers finish their job, the Server kills them. The Worker Supervisor
+  only restarts workers killed by anormal reasons.
+  """
+
   use DynamicSupervisor
   require Logger
 
