@@ -117,8 +117,8 @@ defmodule Panda.Server do
 
       result =
       if (rating_system == :norm) do
-	Panda.Ranting.normalise(new_results)
-      else "not implemented"
+	Panda.Rating.normalise(new_results)
+      else Panda.Rating.elo(new_results)
       end
 
       insert(scores, {match_id, result})

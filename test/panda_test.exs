@@ -10,9 +10,8 @@ defmodule PandaTest do
     IO.inspect "this test first"
     assert (Panda.odds_for_match(1) ==
       "please call Panda.upcoming_matches first")
-  end
-
-  test "odds_for_match check arguments 2" do
+  #end
+  #test "odds_for_match check arguments 2" do
     IO.inspect "that test second"
     Panda.upcoming_matches
 
@@ -39,13 +38,36 @@ defmodule PandaTest do
   test "normalise scores" do
     odds = [ %{"acronym" => "iG.V", "id" => 1650, "score" => 1.2},
   	     %{"acronym" => "Aster.A", "id" => 126000, "score" => 1.7}]
-    assert (Panda.Ranting.normalise_odds(odds) ==
+    assert (Panda.Rating.normalise_odds(odds) ==
       %{"Aster.A" => 0.5862068965517241, "iG.V" => 0.41379310344827586})
   end
 
   test "statistics for a team" do
     opponents_id = matches_opponent_winner()
-    assert (Panda.Ranting.statistics_player(opponents_id, 1664) == {44,30})
+    assert (Panda.Rating.statistics_player(opponents_id, 1664) == {44,30})
+  end
+
+
+  test "elo not compatible" do
+    assert (Panda.Rating.elo([]) ==
+      "elo rating system works for two players games")
+
+    assert (Panda.Rating.elo([1,2,3]) ==
+      "elo rating system works for two players games")
+  end
+
+  test "elo odds" do
+    ratings = :ets.new(:ratings, [:set, :protected])
+    assert (Panda.Rating.elo_odds(ratings, 125964, 1649) ==
+      %{1 => {1000, 0.5}, 2 => {1000, 0.5}})
+
+    Panda.Rating.update_ratings(%{"opponent_id" => 125964, "winner_id" => 1649},
+      ratings)
+
+    assert (:ets.lookup(ratings, 125964) == [{125964, 992.0}])
+    assert (:ets.lookup(ratings, 1649) == [{1649, 1008.0}])
+
+    assert (:ets.delete(ratings))
   end
 
   def test_matches do
@@ -240,8 +262,5 @@ defmodule PandaTest do
       %{"opponent_id" => 2576, "winner_id" => nil},
       %{"opponent_id" => 1664, "winner_id" => 1657}]
   end
-
-
-
 
 end
